@@ -73,8 +73,10 @@ if uploaded_file is not None:
     else:
         st.error("🚨 **Prediction: Malignant (Possible skin cancer)**")
 
-    st.markdown("---")
-    st.caption("Developed for educational purposes only. Not for medical use.")
+
 
 else:
     st.info("👆 Please upload an image to analyze.")
+
+st.markdown("---")
+st.caption("Developed for educational purposes only. Not for medical use.")
