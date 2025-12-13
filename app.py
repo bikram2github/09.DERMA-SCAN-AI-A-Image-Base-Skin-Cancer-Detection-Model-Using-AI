@@ -114,7 +114,8 @@ if uploaded_file is not None:
             time.sleep(0.5)
 
             prompt = ChatPromptTemplate.from_messages([
-                ("system", "You are a medical AI assistant specialized in dermatology. Provide detailed analysis and recommendations based on skin lesion classifications."),
+                ("system", "You are a medical AI assistant specialized in dermatology. Provide detailed analysis and recommendations based on skin lesion classifications."
+                "don't use multiple fonts in your response. Stick to plain text formatting."),
                 ("user", "The model has predicted that the skin lesion is {prediction} with a confidence of {confidence:.2f}%. Please provide a detailed report including possible implications, recommended next steps, and any precautions the user should take.")
             ] )
 
@@ -132,6 +133,8 @@ if uploaded_file is not None:
             st.divider() 
             space = st.empty()
             space.write("")
+
+
             st.download_button(
                 label="📥 Download Report",
                 data=report,
