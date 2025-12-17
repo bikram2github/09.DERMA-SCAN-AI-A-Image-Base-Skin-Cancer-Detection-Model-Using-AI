@@ -18,7 +18,7 @@ parser=StrOutputParser()
 
 @st.cache_resource
 def load_tflite_model():
-    interpreter = tf.lite.Interpreter(model_path="cnn_full_model.tflite")
+    interpreter = tf.lite.Interpreter(model_path="cnn_full_2model_resnet.tflite")
     interpreter.allocate_tensors()
     return interpreter
 
@@ -26,7 +26,7 @@ interpreter = load_tflite_model()
 
 
 st.warning("⚠️ This tool is for educational purposes only and should not be used for medical diagnosis.")
-st.title("🩺 DERMA-SCAN AI: Image-Based Skin Cancer Detection Using AI")
+st.title(" DERMA-SCAN AI: Image-Based Skin Cancer Detection Using AI")
 st.write("Upload an image of a skin lesion to check for potential skin cancer.")
 
 
@@ -37,7 +37,7 @@ class_names = ['Benign', 'Malignant']
 
 @st.cache_data
 def preprocess_image(image):
-    image = image.resize((150, 150))
+    image = image.resize((224, 224))
     image = np.expand_dims(image, axis=0)
     return image.astype(np.float32)
 
@@ -102,7 +102,7 @@ if uploaded_file is not None:
         "image": image,
         "prediction": predicted_class,
     })
-    st.markdown("### 🔍 Model Explanation:")
+    st.markdown("### Model Explanation:")
     st.warning(explanation)
 
 
@@ -110,13 +110,14 @@ if uploaded_file is not None:
     space = st.empty()
     space.write("")
 
-    if st.button("📝 Generate Detailed Report"):
+    if st.button(" Generate Detailed Report"):
         with st.spinner("Generating report...",show_time=True):
             time.sleep(0.5)
 
             prompt = ChatPromptTemplate.from_messages([
                 ("system", "You are a medical AI assistant specialized in dermatology. Provide detailed analysis and recommendations based on skin lesion classifications."
-                "don't use multiple fonts in your response. Stick to plain text formatting."),
+                "don't use multiple fonts in your response. Stick to plain text formatting."
+                "strictly the report should not look line ai generated report."),
                 ("user", "The model has predicted that the skin lesion is {prediction} with a confidence of {confidence:.2f}%. Please provide a detailed report including possible implications, recommended next steps, and any precautions the user should take.")
             ] )
 
@@ -129,7 +130,7 @@ if uploaded_file is not None:
             st.divider() 
             space = st.empty()
             space.write("")
-            st.markdown("### 📝Here is the Detailed Report:")
+            st.markdown("### Here is the Detailed Report:")
             st.write(report)
             st.divider() 
             space = st.empty()
@@ -137,7 +138,7 @@ if uploaded_file is not None:
 
 
             st.download_button(
-                label="📥 Download Report",
+                label=" Download Report",
                 data=report,
                 file_name="derma_scan_report.txt",
                 mime="text/plain"
