@@ -1,1 +1,2 @@
 *.tflite filter=lfs diff=lfs merge=lfs -text
+cnn_full_2model_resnet.tflite filter=lfs diff=lfs merge=lfs -text
