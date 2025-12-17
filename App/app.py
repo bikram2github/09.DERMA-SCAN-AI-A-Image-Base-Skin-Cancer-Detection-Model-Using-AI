@@ -18,7 +18,7 @@ parser=StrOutputParser()
 
 @st.cache_resource
 def load_tflite_model():
-    interpreter = tf.lite.Interpreter(model_path="cnn_full_2model_resnet.tflite")
+    interpreter = tf.lite.Interpreter(model_path="Models/cnn_full_2model_resnet.tflite")
     interpreter.allocate_tensors()
     return interpreter
 
