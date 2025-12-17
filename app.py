@@ -66,15 +66,16 @@ if uploaded_file is not None:
         confidence_benign = (1 - confidence) * 100
 
     
-    st.markdown("### 📊 Confidence Breakdown:")
+    
+    
     col1, col2 = st.columns(2)
     col1.metric("Benign", f"{confidence_benign:.2f}%")
     col2.metric("Malignant", f"{confidence_malignant:.2f}%")
 
     if predicted_class == "Benign":
-        st.success("✅ **Prediction: Benign (Non-cancerous)**")
+        st.success(" **Prediction: Benign (Non-cancerous)**")
     else:
-        st.error("🚨 **Prediction: Malignant (Possible skin cancer)**")
+        st.error(" **Prediction: Malignant (cancerous)**")
 
 
     st.divider() 
