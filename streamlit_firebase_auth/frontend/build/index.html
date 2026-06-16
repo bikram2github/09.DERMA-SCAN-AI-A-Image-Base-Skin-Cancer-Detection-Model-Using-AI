@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Firebase Auth Component</title>
+    <style>
+      body { font-family: Arial, sans-serif; padding: 12px; }
+      .row { margin-bottom: 10px; }
+      .tabs button { margin-right: 8px; padding: 6px 10px; }
+      input { padding: 8px; width: 100%; box-sizing: border-box; margin-top: 4px; }
+      button.primary { padding: 10px; width: 100%; margin-top: 6px; }
+      .msg { margin-top: 10px; white-space: pre-line; }
+      .muted { color: #666; font-size: 13px; }
+    </style>
+
+    <!-- Firebase compat SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  </head>
+  <body>
+    <div id="app"></div>
+
+    <script>
+      // --- Streamlit component plumbing ---
+      function setComponentValue(value) {
+        // Streamlit expects postMessage with isStreamlitMessage=true
+        window.parent.postMessage(
+          {
+            isStreamlitMessage: true,
+            type: "streamlit:componentValue",
+            value: value,
+          },
+          "*"
+        );
+      }
+
+      function getProps() {
+        // Streamlit passes component props as window.__STREAMLIT_COMPONENT_PROPS__
+        // This is how streamlit-component-lib exposes them.
+        return window.__STREAMLIT_COMPONENT_PROPS__ || {};
+      }
+
+      const props = getProps();
+
+      const apiKey = props.apiKey || "";
+      const authDomain = props.authDomain || "";
+      const projectId = props.projectId || "";
+      const appId = props.appId || "";
+
+      const firebaseConfig = {
+        apiKey: apiKey,
+        authDomain: authDomain,
+        projectId: projectId,
+        appId: appId,
+      };
+
+      // Initialize Firebase once
+      let appInitialized = false;
+      function initFirebase() {
+        if (appInitialized) return;
+        if (!firebase.apps || !firebase.apps.length) {
+          firebase.initializeApp(firebaseConfig);
+        }
+        appInitialized = true;
+      }
+
+      initFirebase();
+      const auth = firebase.auth();
+
+      const container = document.getElementById("app");
+
+      let mode = "login"; // "login" | "signup"
+      let currentUser = null;
+      let unsubscribe = null;
+
+      function render() {
+        container.innerHTML = `
+          <div class="tabs">
+            <button ${mode === "login" ? "disabled" : ""} onclick="switchMode('login')">Log in</button>
+            <button ${mode === "signup" ? "disabled" : ""} onclick="switchMode('signup')">Sign up</button>
+          </div>
+
+          <div class="row">
+            <label>Email</label>
+            <input id="email" type="email" placeholder="you@example.com" />
+          </div>
+
+          <div class="row">
+            <label>Password</label>
+            <input id="password" type="password" placeholder="••••••••" />
+          </div>
+
+          <button class="primary" onclick="onSubmit()">
+            ${mode === "login" ? "Sign in" : "Create account"}
+          </button>
+
+          <div class="msg" id="status"></div>
+
+          <div class="row" style="margin-top:14px;">
+            <button class="primary" style="background:#eee; border:1px solid #ccc;" onclick="onLogout()">
+              Log out
+            </button>
+            <div class="muted">After login, the app will pass your Firebase ID token to Streamlit.</div>
+          </div>
+        `;
+      }
+
+      function setStatus(text) {
+        const el = document.getElementById("status");
+        if (el) el.textContent = text;
+      }
+
+      window.switchMode = function(m) {
+        mode = m;
+        render();
+      }
+
+      window.onSubmit = async function() {
+        try {
+          const email = document.getElementById("email").value.trim();
+          const password = document.getElementById("password").value;
+
+          if (!email) return setStatus("Enter an email.");
+          if (!password || password.length < 6) return setStatus("Enter a valid password (min 6 chars).");
+
+          initFirebase();
+
+          if (mode === "signup") {
+            setStatus("Creating account...");
+            const cred = await auth.createUserWithEmailAndPassword(email, password);
+
+            // Trigger verification email
+            if (cred.user) {
+              await cred.user.sendEmailVerification();
+              setStatus("Account created. Please verify your email.\nThen log in using the same credentials.");
+            } else {
+              setStatus("Account created, but user is missing. Please try again.");
+            }
+
+            // Note: keep them logged in; they may need to log in again after verification.
+            // We'll rely on emailVerified on the next login / reload.
+            return;
+          }
+
+          // mode === "login"
+          setStatus("Signing in...");
+          const cred = await auth.signInWithEmailAndPassword(email, password);
+
+          const user = cred.user;
+          if (!user) return setStatus("Login failed (no user).");
+
+          // Ensure we have a fresh emailVerified state
+          await user.reload();
+          const emailVerified = !!user.emailVerified;
+
+          // If not verified: tell user and return no token
+          if (!emailVerified) {
+            setStatus("Email not verified yet. Please verify via the email link, then try logging in again.");
+            setComponentValue({
+              status: "needs_verify",
+              emailVerified: false,
+              email: user.email,
+            });
+            return;
+          }
+
+          const idToken = await user.getIdToken(/* forceRefresh */ true);
+
+          setStatus("Logged in ✅");
+          setComponentValue({
+            status: "logged_in",
+            idToken: idToken,
+            emailVerified: true,
+            email: user.email,
+          });
+        } catch (err) {
+          console.error(err);
+          setStatus("Error: " + (err && err.message ? err.message : String(err)));
+          setComponentValue({
+            status: "error",
+            message: err && err.message ? err.message : String(err),
+          });
+        }
+      };
+
+      window.onLogout = async function() {
+        try {
+          setStatus("Signing out...");
+          await auth.signOut();
+          currentUser = null;
+          setComponentValue({ status: "logged_out" });
+          render();
+          setStatus("Logged out.");
+        } catch (err) {
+          console.error(err);
+          setStatus("Logout error: " + (err && err.message ? err.message : String(err)));
+        }
+      };
+
+      // Auth state listener to handle refreshes
+      function attachListener() {
+        if (unsubscribe) return;
+        unsubscribe = auth.onAuthStateChanged(async (user) => {
+          currentUser = user || null;
+          if (!user) {
+            // Logged out
+            setStatus("Logged out. Please sign in.");
+            setComponentValue({ status: "logged_out" });
+            return;
+          }
+          // We may have an already-signed-in user; verify email state
+          try {
+            await user.reload();
+          } catch (e) {
+            // ignore
+          }
+          const emailVerified = !!user.emailVerified;
+          if (!emailVerified) {
+            setStatus("Email not verified. Please verify first, then log in again.");
+            setComponentValue({
+              status: "needs_verify",
+              emailVerified: false,
+              email: user.email,
+            });
+            return;
+          }
+
+          const idToken = await user.getIdToken(/* forceRefresh */ true);
+          setStatus("Logged in ✅");
+          setComponentValue({
+            status: "logged_in",
+            idToken: idToken,
+            emailVerified: true,
+            email: user.email,
+          });
+        });
+      }
+
+      render();
+      attachListener();
+    </script>
+  </body>
+</html>

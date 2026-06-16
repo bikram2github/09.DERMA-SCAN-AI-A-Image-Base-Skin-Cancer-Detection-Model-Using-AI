@@ -57,4 +57,5 @@ generate structured diagnostic reports.
 
 ```bash
 pip install -r requirements.txt
-streamlit run app/app.py
+# run from this folder
+streamlit run app.py
