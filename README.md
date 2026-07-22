@@ -2,7 +2,7 @@
 
 CNN-based Skin Cancer Screening with Automated Diagnostic Report Generation
 
-Web Link: https://derma-scan-ai.streamlit.app/
+Web Link: [https://derma-scan-ai.streamlit.app/](https://the-derma-scan-ai.streamlit.app/)
 
 ## Overview
 DERMA SCAN AI is a deep learning–based system designed for binary skin cancer screening
